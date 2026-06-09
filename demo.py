@@ -10,6 +10,9 @@ import json
 import os
 from datetime import datetime
 
+sys.stdout.reconfigure(encoding="utf-8")
+sys.stderr.reconfigure(encoding="utf-8")
+
 from src.transformer import Transformer
 from src.logger import Logger
 
