@@ -1,34 +1,45 @@
 {
+  "_descricao": "SISTEMA 1 — dados ANTES da migracao ETL (inclui registros invalidos)",
   "products": {
     "prod-001": {
+      "id": "prod-001",
       "name": "Camiseta Polo",
       "description": "Camiseta polo masculina azul",
       "price": 79.9,
       "imageURL": "https://loja.com/camiseta.jpg",
-      "isFavorite": true,
-      "_migrado_em": "2026-06-15T13:00:45.899295",
-      "_origem_id": "prod-001",
-      "_sistema": "Sistema X"
+      "isFavorite": 1
     },
     "prod-002": {
-      "name": "Calca Jeans",
-      "description": "Calca jeans slim fit",
+      "id": "prod-002",
+      "name": "  Calca Jeans  ",
+      "description": "  Calca jeans slim fit  ",
       "price": 149.9,
       "imageURL": "https://loja.com/calca.jpg",
-      "isFavorite": false,
-      "_migrado_em": "2026-06-15T13:00:45.899295",
-      "_origem_id": "prod-002",
-      "_sistema": "Sistema X"
+      "isFavorite": 0
     },
     "prod-003": {
+      "id": "prod-003",
       "name": "Tenis Running Pro",
       "description": "Tenis para corrida de alta performance",
       "price": 299.9,
       "imageURL": "https://loja.com/tenis.jpg",
-      "isFavorite": true,
-      "_migrado_em": "2026-06-15T13:00:45.899295",
-      "_origem_id": "prod-003",
-      "_sistema": "Sistema X"
+      "isFavorite": 1
+    },
+    "prod-004": {
+      "id": "prod-004",
+      "name": "",
+      "description": "Produto sem nome — INVALIDO",
+      "price": 49.9,
+      "imageURL": "https://loja.com/img.jpg",
+      "isFavorite": 0
+    },
+    "prod-005": {
+      "id": "prod-005",
+      "name": "Produto Preco Negativo",
+      "description": "Preco invalido — INVALIDO",
+      "price": -15.0,
+      "imageURL": "https://loja.com/img2.jpg",
+      "isFavorite": 0
     }
   },
   "orders": {
@@ -50,10 +61,7 @@
           "quantity": 1,
           "price": 149.9
         }
-      ],
-      "_migrado_em": "2026-06-15T13:00:45.899295",
-      "_origem_id": "ord-001",
-      "_sistema": "Sistema X"
+      ]
     },
     "ord-002": {
       "total": 299.9,
@@ -66,10 +74,12 @@
           "quantity": 1,
           "price": 299.9
         }
-      ],
-      "_migrado_em": "2026-06-15T13:00:45.899295",
-      "_origem_id": "ord-002",
-      "_sistema": "Sistema X"
+      ]
+    },
+    "ord-003": {
+      "total": 0.0,
+      "date": "2024-03-18T09:15:00",
+      "products": []
     }
   }
 }

@@ -1,4 +1,5 @@
 {
+  "_descricao": "SISTEMA 2 — dados DEPOIS da migracao ETL (somente registros validos)",
   "products": {
     "prod-001": {
       "name": "Camiseta Polo",
@@ -6,7 +7,7 @@
       "price": 79.9,
       "imageURL": "https://loja.com/camiseta.jpg",
       "isFavorite": true,
-      "_migrado_em": "2026-06-15T13:00:45.899295",
+      "_migrado_em": "2026-06-15T13:04:40.690411",
       "_origem_id": "prod-001",
       "_sistema": "Sistema X"
     },
@@ -16,7 +17,7 @@
       "price": 149.9,
       "imageURL": "https://loja.com/calca.jpg",
       "isFavorite": false,
-      "_migrado_em": "2026-06-15T13:00:45.899295",
+      "_migrado_em": "2026-06-15T13:04:40.690411",
       "_origem_id": "prod-002",
       "_sistema": "Sistema X"
     },
@@ -26,7 +27,7 @@
       "price": 299.9,
       "imageURL": "https://loja.com/tenis.jpg",
       "isFavorite": true,
-      "_migrado_em": "2026-06-15T13:00:45.899295",
+      "_migrado_em": "2026-06-15T13:04:40.690411",
       "_origem_id": "prod-003",
       "_sistema": "Sistema X"
     }
@@ -51,7 +52,7 @@
           "price": 149.9
         }
       ],
-      "_migrado_em": "2026-06-15T13:00:45.899295",
+      "_migrado_em": "2026-06-15T13:04:40.690411",
       "_origem_id": "ord-001",
       "_sistema": "Sistema X"
     },
@@ -67,7 +68,7 @@
           "price": 299.9
         }
       ],
-      "_migrado_em": "2026-06-15T13:00:45.899295",
+      "_migrado_em": "2026-06-15T13:04:40.690411",
       "_origem_id": "ord-002",
       "_sistema": "Sistema X"
     }
