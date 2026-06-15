@@ -1,0 +1,17 @@
+{
+  "modo": "DEMO",
+  "inicio": "2026-06-09T13:04:32.153094",
+  "fim": "2026-06-09T13:04:32.160061",
+  "duracao_s": 0.01,
+  "colecoes": {
+    "products": 3,
+    "orders": 2
+  },
+  "totais": {
+    "extraidos": 8,
+    "transformados": 5,
+    "carregados": 5,
+    "ignorados": 3,
+    "erros": 0
+  }
+}

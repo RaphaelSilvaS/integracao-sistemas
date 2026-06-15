@@ -1,0 +1,75 @@
+{
+  "products": {
+    "prod-001": {
+      "name": "Camiseta Polo",
+      "description": "Camiseta polo masculina azul marinho",
+      "price": 79.9,
+      "imageURL": "https://exemplo.com/camiseta-polo.jpg",
+      "isFavorite": true,
+      "_migrado_em": "2026-06-09T13:04:32.158061",
+      "_origem_id": "prod-001",
+      "_sistema": "Sistema X"
+    },
+    "prod-002": {
+      "name": "Calca Jeans",
+      "description": "Calca jeans slim fit masculina",
+      "price": 149.9,
+      "imageURL": "https://exemplo.com/calca-jeans.jpg",
+      "isFavorite": false,
+      "_migrado_em": "2026-06-09T13:04:32.158061",
+      "_origem_id": "prod-002",
+      "_sistema": "Sistema X"
+    },
+    "prod-003": {
+      "name": "Tenis Running Pro",
+      "description": "Tenis para corrida de alta performance",
+      "price": 299.9,
+      "imageURL": "https://exemplo.com/tenis-running.jpg",
+      "isFavorite": true,
+      "_migrado_em": "2026-06-09T13:04:32.158061",
+      "_origem_id": "prod-003",
+      "_sistema": "Sistema X"
+    }
+  },
+  "orders": {
+    "ord-001": {
+      "total": 229.8,
+      "date": "2024-03-15T14:30:00",
+      "products": [
+        {
+          "id": "item1",
+          "productId": "prod-001",
+          "name": "Camiseta Polo",
+          "quantity": 2,
+          "price": 79.9
+        },
+        {
+          "id": "item2",
+          "productId": "prod-002",
+          "name": "Calca Jeans",
+          "quantity": 1,
+          "price": 149.9
+        }
+      ],
+      "_migrado_em": "2026-06-09T13:04:32.158061",
+      "_origem_id": "ord-001",
+      "_sistema": "Sistema X"
+    },
+    "ord-002": {
+      "total": 299.9,
+      "date": "2024-03-17T11:00:00",
+      "products": [
+        {
+          "id": "item1",
+          "productId": "prod-003",
+          "name": "Tenis Running Pro",
+          "quantity": 1,
+          "price": 299.9
+        }
+      ],
+      "_migrado_em": "2026-06-09T13:04:32.158061",
+      "_origem_id": "ord-002",
+      "_sistema": "Sistema X"
+    }
+  }
+}
