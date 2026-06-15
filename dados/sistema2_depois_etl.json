@@ -7,9 +7,9 @@
       "price": 79.9,
       "imageURL": "https://loja.com/camiseta.jpg",
       "isFavorite": true,
-      "_migrado_em": "2026-06-15T13:04:40.690411",
+      "_migrado_em": "2026-06-15T15:56:35.352832",
       "_origem_id": "prod-001",
-      "_sistema": "Sistema X"
+      "_sistema": "Sistema 1"
     },
     "prod-002": {
       "name": "Calca Jeans",
@@ -17,9 +17,9 @@
       "price": 149.9,
       "imageURL": "https://loja.com/calca.jpg",
       "isFavorite": false,
-      "_migrado_em": "2026-06-15T13:04:40.690411",
+      "_migrado_em": "2026-06-15T15:56:35.352832",
       "_origem_id": "prod-002",
-      "_sistema": "Sistema X"
+      "_sistema": "Sistema 1"
     },
     "prod-003": {
       "name": "Tenis Running Pro",
@@ -27,9 +27,9 @@
       "price": 299.9,
       "imageURL": "https://loja.com/tenis.jpg",
       "isFavorite": true,
-      "_migrado_em": "2026-06-15T13:04:40.690411",
+      "_migrado_em": "2026-06-15T15:56:35.352832",
       "_origem_id": "prod-003",
-      "_sistema": "Sistema X"
+      "_sistema": "Sistema 1"
     }
   },
   "orders": {
@@ -52,9 +52,9 @@
           "price": 149.9
         }
       ],
-      "_migrado_em": "2026-06-15T13:04:40.690411",
+      "_migrado_em": "2026-06-15T15:56:35.352832",
       "_origem_id": "ord-001",
-      "_sistema": "Sistema X"
+      "_sistema": "Sistema 1"
     },
     "ord-002": {
       "total": 299.9,
@@ -68,9 +68,9 @@
           "price": 299.9
         }
       ],
-      "_migrado_em": "2026-06-15T13:04:40.690411",
+      "_migrado_em": "2026-06-15T15:56:35.352832",
       "_origem_id": "ord-002",
-      "_sistema": "Sistema X"
+      "_sistema": "Sistema 1"
     }
   }
 }

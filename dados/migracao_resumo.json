@@ -1,8 +1,8 @@
 {
   "sistema_origem": "Sistema 1 — SQLite (dados\\sistema1.db)",
   "sistema_destino": "Sistema 2 — JSON (dados\\sistema2_depois_etl.json)",
-  "inicio": "2026-06-15T13:04:40.687380",
-  "fim": "2026-06-15T13:04:40.691413",
+  "inicio": "2026-06-15T15:56:35.349861",
+  "fim": "2026-06-15T15:56:35.354832",
   "duracao_s": 0.0,
   "colecoes": {
     "products": 3,

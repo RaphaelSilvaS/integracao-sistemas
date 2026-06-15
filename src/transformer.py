@@ -108,7 +108,7 @@ class Transformer:
             "isFavorite":  bool(dados.get("isFavorite", False)),
             "_migrado_em": datetime.now().isoformat(),
             "_origem_id":  id_registro,
-            "_sistema":    "Sistema X",
+            "_sistema":    "Sistema 1",
         }
 
     # ----------------------------------------------------------
@@ -170,7 +170,7 @@ class Transformer:
             "products":    produtos_normalizados,
             "_migrado_em": datetime.now().isoformat(),
             "_origem_id":  id_registro,
-            "_sistema":    "Sistema X",
+            "_sistema":    "Sistema 1",
         }
 
     # ----------------------------------------------------------
@@ -189,5 +189,5 @@ class Transformer:
             **dados,
             "_migrado_em": datetime.now().isoformat(),
             "_origem_id":  id_registro,
-            "_sistema":    "Sistema X",
+            "_sistema":    "Sistema 1",
         }
