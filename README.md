@@ -61,6 +61,17 @@ Dois sistemas em linguagens diferentes comunicando via mesma API REST.
 
 ---
 
+### Pré-requisito — Chave Groq (gratuita, 2 minutos)
+
+A IA de validação usa o **Groq** (gratuito, sem cartão de crédito):
+
+1. Acesse [console.groq.com](https://console.groq.com)
+2. Entre com conta Google
+3. Clique em **"API Keys"** → **"Create API Key"**
+4. Copie a chave gerada
+
+---
+
 ### Passo 1 — Clone o repositório
 
 ```bash
@@ -70,7 +81,26 @@ cd integracao-sistemas
 
 ---
 
-### Passo 2 — Execute o Sistema A (Python)
+### Passo 2 — Configure a chave Groq
+
+Crie um arquivo `.env` na raiz do projeto:
+
+```
+GROQ_API_KEY=sua_chave_groq_aqui
+```
+
+Ou exporte no terminal:
+```bash
+# Windows
+set GROQ_API_KEY=sua_chave_aqui
+
+# Linux/Mac
+export GROQ_API_KEY=sua_chave_aqui
+```
+
+---
+
+### Passo 3 — Execute o Pipeline de Agentes (Sistema A)
 
 O Sistema A popula o Firebase com produtos validados:
 
