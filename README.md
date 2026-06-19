@@ -104,21 +104,32 @@ integracao-firebase/
 
 ## Como Reproduzir o Ambiente
 
-### 1. Pré-requisitos
+### Modo Demo — recomendado para validação (sem Firebase)
 
-- Python 3.10+
-- Conta no [Firebase](https://firebase.google.com/) com dois projetos criados
-- Chave de API da [Anthropic (Claude)](https://console.anthropic.com/)
-
-### 2. Instalação
+**Pré-requisito único:** Chave de API da [Anthropic (Claude)](https://console.anthropic.com/)
 
 ```bash
-git clone https://github.com/RaphaelSilvaS/integracao-firebase.git
-cd integracao-firebase
+# 1. Clone o repositório
+git clone https://github.com/RaphaelSilvaS/integracao-sistemas.git
+cd integracao-sistemas
+
+# 2. Instale as dependências
 pip install -r requirements.txt
+
+# 3. Configure a chave da API (Windows)
+set ANTHROPIC_API_KEY=sua_chave_aqui
+
+# 4. Execute
+python demo_agentes.py
 ```
 
-### 3. Configuração
+O Sistema A (SQLite) e o Sistema B (JSON) são criados automaticamente na pasta `dados/`. Nenhuma conta Firebase é necessária.
+
+---
+
+### Modo Produção — Firebase real (opcional)
+
+**Pré-requisitos:** Dois projetos Firebase + Chave Anthropic
 
 Edite `config/settings.py` com as credenciais dos dois projetos Firebase:
 
@@ -139,26 +150,9 @@ FIREBASE_DESTINO = {
 }
 ```
 
-Configure a chave da API Anthropic como variável de ambiente:
-
 ```bash
-# Windows
 set ANTHROPIC_API_KEY=sua_chave_aqui
-
-# Linux/Mac
-export ANTHROPIC_API_KEY=sua_chave_aqui
-```
-
-### 4. Execução
-
-**Modo Multi-Agente com IA (recomendado):**
-```bash
 python main_agentes.py
-```
-
-**Modo demonstração local (sem Firebase, sem IA):**
-```bash
-python demo.py
 ```
 
 ---
