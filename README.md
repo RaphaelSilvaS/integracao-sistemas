@@ -1,158 +1,205 @@
-# Pipeline ETL — Integracao entre Sistemas com IA
-### Projeto Integrador | Integração entre Sistemas
+# Pipeline ETL Multi-Agente com IA
 
-Sistema de integração de dados entre dois sistemas distintos, implementando o pipeline **ETL** (Extract → Transform → Load).
+Sistema de integração de dados entre dois ambientes Firebase, utilizando arquitetura de agentes autônomos com validação inteligente via IA (Claude — Anthropic).
 
 ---
 
-## Os dois sistemas
+## Sistemas Envolvidos
 
-| | Sistema 1 (Origem) | Sistema 2 (Destino) |
+| | Sistema A | Sistema B |
 |---|---|---|
-| **Tecnologia** | Banco de dados SQLite | Arquivo JSON |
-| **Arquivo** | `dados/sistema1.db` | `dados/sistema2_depois_etl.json` |
-| **Função** | Fonte dos dados brutos | Destino dos dados validados |
-| **Validação** | `dados/sistema1_antes_etl.json` | `dados/sistema2_depois_etl.json` |
-
-### Como validar a migração
-
-Após rodar `python demo.py`, compare os dois arquivos:
-
-- **`dados/sistema1_antes_etl.json`** — dados brutos do Sistema 1, incluindo registros inválidos
-- **`dados/sistema2_depois_etl.json`** — dados migrados para o Sistema 2, somente registros válidos
-
-Diferenças esperadas entre os dois arquivos:
-
-| Registro | Sistema 1 | Sistema 2 | Motivo |
-|----------|-----------|-----------|--------|
-| prod-001 | ✅ presente | ✅ migrado | válido |
-| prod-002 | ✅ presente | ✅ migrado (nome normalizado) | válido |
-| prod-003 | ✅ presente | ✅ migrado | válido |
-| prod-004 | ⚠️ presente | ❌ rejeitado | nome vazio |
-| prod-005 | ⚠️ presente | ❌ rejeitado | preço negativo |
-| ord-001  | ✅ presente | ✅ migrado | válido |
-| ord-002  | ✅ presente | ✅ migrado | válido |
-| ord-003  | ⚠️ presente | ❌ rejeitado | total zero e sem itens |
+| **Tipo** | Firebase Realtime Database (Origem) | Firebase Realtime Database (Destino) |
+| **Papel** | Fornece os dados brutos | Recebe os dados validados e normalizados |
+| **Config** | `config/settings.py → FIREBASE_ORIGEM` | `config/settings.py → FIREBASE_DESTINO` |
 
 ---
 
-## Como rodar (sem nenhuma configuração)
+## Arquitetura de Agentes
 
-Requisitos: **Python 3.10+** instalado.
-
-```bash
-# 1. Clone o repositório
-git clone https://github.com/RaphaelSilvaS/integracao-firebase.git
-cd integracao-firebase
-
-# 2. Instale as dependências
-pip install -r requirements.txt
-
-# 3. Execute o pipeline ETL no modo demo
-python demo.py
-```
-
-Ao final da execução, os arquivos de validação estarão em `dados/`:
+O pipeline é composto por **1 agente orquestrador** e **4 sub-agentes especializados**, cada um com responsabilidade única e autônoma.
 
 ```
-dados/
-├── sistema1.db                 ← Sistema 1: banco SQLite (origem)
-├── sistema1_antes_etl.json     ← Sistema 1 exportado para leitura (ANTES)
-├── sistema2_depois_etl.json    ← Sistema 2: resultado da migração (DEPOIS)
-└── migracao_resumo.json        ← resumo da execução com métricas
+┌─────────────────────────────────────────────┐
+│           AGENTE ORQUESTRADOR               │
+│   Coordena o fluxo e o contexto compartilhado│
+└────────────────────┬────────────────────────┘
+                     │
+     ┌───────────────┼───────────────────┐
+     ▼               ▼                   ▼
+┌─────────┐   ┌────────────┐   ┌──────────────┐
+│Sub-agente│   │ Sub-agente │   │  Sub-agente  │
+│Extração  │──▶│Validação IA│──▶│Transformação │
+│          │   │  (Claude)  │   │              │
+└─────────┘   └────────────┘   └──────┬───────┘
+                                       │
+                          ┌────────────┴──────────┐
+                          ▼                        ▼
+                   ┌────────────┐         ┌──────────────┐
+                   │ Sub-agente │         │  Sub-agente  │
+                   │   Carga    │         │ Monitoramento│
+                   │(Sistema B) │         │  (Relatório) │
+                   └────────────┘         └──────────────┘
 ```
+
+### Agente Orquestrador — `agents/orchestrator_agent.py`
+
+Responsável por inicializar e coordenar todos os sub-agentes em sequência. Gerencia o contexto compartilhado entre eles e interrompe o pipeline em caso de falha crítica.
+
+### Sub-agente de Extração — `agents/extraction_agent.py`
+
+Conecta ao **Sistema A** (Firebase Origem), autentica via API REST e extrai todas as coleções configuradas (`products`, `orders`). Retorna os dados brutos para o contexto compartilhado.
+
+### Sub-agente de Validação IA — `agents/validation_agent.py`
+
+Envia uma amostra dos dados extraídos para o modelo **Claude (Anthropic)** e recebe:
+
+- **Score de qualidade** dos dados (0 a 100)
+- **Lista de anomalias** detectadas automaticamente (campos vazios, preços negativos, formatos inválidos)
+- **Decisão autônoma**: `prosseguir` ou `interromper` o pipeline
+
+Este agente resolve a **complexidade** do projeto — a IA analisa padrões que regras fixas não conseguem detectar.
+
+### Sub-agente de Transformação — `agents/transformation_agent.py`
+
+Valida campos obrigatórios, normaliza strings, arredonda valores numéricos e adiciona metadados de migração (timestamp, ID de origem). Apenas registros válidos seguem para a carga.
+
+### Sub-agente de Carga — `agents/loading_agent.py`
+
+Conecta ao **Sistema B** (Firebase Destino), autentica e carrega os dados transformados coleção a coleção via requisições PUT, preservando os IDs originais.
+
+### Sub-agente de Monitoramento — `agents/monitoring_agent.py`
+
+Consolida as métricas de todos os agentes e gera um relatório JSON em `dados/relatorios/`. Exibe no terminal um sumário com totais de registros extraídos, validados, transformados e carregados.
 
 ---
 
-## Etapas do pipeline ETL
-
-```
-┌─────────────┐     ┌───────────┐     ┌─────────────┐     ┌─────────────┐
-│  SISTEMA 1  │     │  EXTRACT  │     │  TRANSFORM  │     │  SISTEMA 2  │
-│  SQLite .db │ ──► │  Leitura  │ ──► │  Validação  │ ──► │  JSON file  │
-│  (origem)   │     │  das      │     │  Limpeza    │     │  (destino)  │
-│             │     │  tabelas  │     │  Metadados  │     │             │
-└─────────────┘     └───────────┘     └─────────────┘     └─────────────┘
-```
-
-### O que cada etapa faz
-
-| Etapa | Classe | Descrição |
-|-------|--------|-----------|
-| Extract | `src/extractor.py` | Lê todas as tabelas do Sistema 1 |
-| Transform | `src/transformer.py` | Valida campos obrigatórios, normaliza strings, rejeita inválidos |
-| Load | `src/loader.py` | Grava os registros válidos no Sistema 2 |
-
-### Regras de validação (Transform)
-
-**Produtos:**
-- `name` não pode ser vazio
-- `description` não pode ser vazia
-- `imageURL` não pode ser vazia
-- `price` deve ser numérico e maior que zero
-
-**Pedidos:**
-- `total` deve ser numérico e maior que zero
-- `products` deve ser uma lista não vazia
-- `date` deve ser uma data válida no formato ISO
-
----
-
-## Estrutura do projeto
+## Estrutura do Projeto
 
 ```
 integracao-firebase/
-├── dados/                          ← gerado ao rodar demo.py
-│   ├── sistema1.db                 ← Sistema 1 (SQLite)
-│   ├── sistema1_antes_etl.json     ← Sistema 1 legível (ANTES)
-│   ├── sistema2_depois_etl.json    ← Sistema 2 (DEPOIS)
-│   └── migracao_resumo.json        ← métricas da execução
+├── agents/
+│   ├── base_agent.py           # Classe abstrata base para todos os agentes
+│   ├── orchestrator_agent.py   # Agente Orquestrador
+│   ├── extraction_agent.py     # Sub-agente: extração do Sistema A
+│   ├── validation_agent.py     # Sub-agente: validação por IA (Claude)
+│   ├── transformation_agent.py # Sub-agente: transformação dos dados
+│   ├── loading_agent.py        # Sub-agente: carga no Sistema B
+│   └── monitoring_agent.py     # Sub-agente: métricas e relatório
 ├── src/
-│   ├── extractor.py                ← extrai dados do Sistema 1
-│   ├── transformer.py              ← valida e normaliza os dados
-│   ├── loader.py                   ← carrega dados no Sistema 2
-│   ├── logger.py                   ← logs coloridos + arquivo
-│   └── integrator.py               ← orquestra o pipeline ETL
+│   ├── extractor.py            # Comunicação com Firebase Origem
+│   ├── transformer.py          # Regras de validação e normalização
+│   ├── loader.py               # Comunicação com Firebase Destino
+│   └── logger.py               # Logger colorido com contadores
 ├── config/
-│   └── settings.py                 ← configurações Firebase (modo produção)
-├── tests/
-│   └── test_integration.py         ← testes das regras de validação
-├── demo.py                         ← modo demo (roda sem Firebase)
-├── main.py                         ← modo produção (requer Firebase)
+│   └── settings.py             # Credenciais dos dois sistemas Firebase
+├── dados/
+│   └── relatorios/             # Relatórios gerados automaticamente
+├── main_agentes.py             # Ponto de entrada (modo agentes + IA)
+├── main.py                     # Ponto de entrada (modo produção original)
+├── demo.py                     # Modo demonstração local (sem Firebase)
 └── requirements.txt
 ```
 
 ---
 
-## Testes automatizados
+## Como Reproduzir o Ambiente
+
+### 1. Pré-requisitos
+
+- Python 3.10+
+- Conta no [Firebase](https://firebase.google.com/) com dois projetos criados
+- Chave de API da [Anthropic (Claude)](https://console.anthropic.com/)
+
+### 2. Instalação
 
 ```bash
-python tests/test_integration.py
+git clone https://github.com/RaphaelSilvaS/integracao-firebase.git
+cd integracao-firebase
+pip install -r requirements.txt
 ```
 
-Valida as regras de transformação sem precisar de banco ou internet.
+### 3. Configuração
+
+Edite `config/settings.py` com as credenciais dos dois projetos Firebase:
+
+```python
+FIREBASE_ORIGEM = {
+    "url": "https://seu-projeto-origem.firebaseio.com",
+    "api_key": "SUA_API_KEY_ORIGEM",
+    "email": "seu@email.com",
+    "password": "sua_senha",
+    "colecoes": ["products", "orders"]
+}
+
+FIREBASE_DESTINO = {
+    "url": "https://seu-projeto-destino.firebaseio.com",
+    "api_key": "SUA_API_KEY_DESTINO",
+    "email": "seu@email.com",
+    "password": "sua_senha"
+}
+```
+
+Configure a chave da API Anthropic como variável de ambiente:
+
+```bash
+# Windows
+set ANTHROPIC_API_KEY=sua_chave_aqui
+
+# Linux/Mac
+export ANTHROPIC_API_KEY=sua_chave_aqui
+```
+
+### 4. Execução
+
+**Modo Multi-Agente com IA (recomendado):**
+```bash
+python main_agentes.py
+```
+
+**Modo demonstração local (sem Firebase, sem IA):**
+```bash
+python demo.py
+```
 
 ---
 
-## Uso de Inteligência Artificial
+## Fluxo de Dados
 
-Este projeto foi desenvolvido com apoio de IA (Claude — Anthropic) para:
-- Geração e sugestão de código
-- Modelagem da arquitetura ETL
-- Identificação de erros e melhorias
-- Otimização do pipeline de dados
+```
+Sistema A (Firebase Origem)
+        │
+        ▼
+[Agente Extração] ──► dados brutos em memória
+        │
+        ▼
+[Agente Validação IA] ──► Claude analisa qualidade e anomalias
+        │
+        ▼
+[Agente Transformação] ──► dados normalizados e enriquecidos
+        │
+        ▼
+[Agente Carga] ──► dados gravados no Sistema B
+        │
+        ▼
+Sistema B (Firebase Destino)
+        │
+        ▼
+[Agente Monitoramento] ──► relatório JSON em dados/relatorios/
+```
 
 ---
 
-## Tecnologias utilizadas
+## Tecnologias
 
-- **Python 3.10+**
-- **sqlite3** — banco de dados do Sistema 1 (origem)
-- **json** — formato do Sistema 2 (destino)
-- **requests** — chamadas HTTP para a API REST do Firebase (modo produção)
-- **colorama** — logs coloridos no terminal
+| Tecnologia | Uso |
+|---|---|
+| Python 3.10+ | Linguagem principal |
+| Firebase Realtime Database | Sistema A (Origem) e Sistema B (Destino) |
+| Claude — Anthropic | Validação inteligente de dados (IA) |
+| requests | Comunicação HTTP com Firebase |
+| colorama | Logs coloridos no terminal |
+| python-dotenv | Variáveis de ambiente |
 
 ---
 
-## Projeto Integrador — Integração entre Sistemas
-Curso de Tecnologia da Informação
+Projeto desenvolvido com suporte de IA (Claude — Anthropic) para arquitetura, implementação e validação inteligente dos dados.
