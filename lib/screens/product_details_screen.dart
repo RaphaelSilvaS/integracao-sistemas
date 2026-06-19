@@ -25,10 +25,16 @@ class ProductDetailsScreen extends StatelessWidget {
                 children: [
                   Hero(
                     tag: product.id,
-                    child: Image.network(
-                      product.imageURL,
-                      fit: BoxFit.cover,
-                    ),
+                    child: product.imageURL.isEmpty
+                        ? Image.asset('assets/img/product-placeholder.png', fit: BoxFit.cover)
+                        : Image.network(
+                            product.imageURL,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Image.asset(
+                              'assets/img/product-placeholder.png',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
                   ),
                   const DecoratedBox(
                     decoration: BoxDecoration(
