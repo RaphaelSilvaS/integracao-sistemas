@@ -81,28 +81,27 @@ class DemoExtractionAgent(BaseAgent):
         """)
 
         produtos = [
-            (1, "Camiseta Azul", "Camiseta de algodão", "http://img.com/1.jpg", 49.90),
-            (2, "Calça Jeans", "Calça slim fit", "http://img.com/2.jpg", 129.90),
-            (3, "",           "Sem nome",         "http://img.com/3.jpg", 29.90),
-            (4, "Tênis Sport", "Tênis casual",    "http://img.com/4.jpg", -10.00),
-            (5, "Boné", "Boné aba reta", "http://img.com/5.jpg", 39.90),
+            (1, "Camiseta Polo",   "Camiseta de algodão polo", "http://img.com/1.jpg", 79.90),
+            (2, "Calça Jeans",     "Calça slim fit",            "http://img.com/2.jpg", 149.90),
+            (3, "Tênis Running Pro","Tênis para corrida",       "http://img.com/3.jpg", 299.90),
+            (4, "",                "Produto sem nome",          "http://img.com/4.jpg", 49.90),
+            (5, "Preço negativo",  "Produto com preço inválido","http://img.com/5.jpg", -15.00),
         ]
         cursor.executemany(
             "INSERT INTO produtos VALUES (?,?,?,?,?)", produtos
         )
 
         pedidos = [
-            (1, 179.80, "2024-01-15T10:30:00"),
-            (2, 0.00,   "2024-01-16T11:00:00"),
-            (3, 39.90,  "data-invalida"),
-            (4, 49.90,  "2024-01-17T09:00:00"),
+            (1, 229.80, "2024-01-15T10:30:00"),
+            (2, 299.90, "2024-01-16T11:00:00"),
+            (3, 0.00,   "2024-01-17T09:00:00"),
         ]
         cursor.executemany("INSERT INTO pedidos VALUES (?,?,?)", pedidos)
 
         itens = [
-            (1, 1, "Camiseta Azul", 1, 49.90),
-            (2, 1, "Calça Jeans",   1, 129.90),
-            (3, 4, "Camiseta Azul", 1, 49.90),
+            (1, 1, "Camiseta Polo",    1, 79.90),
+            (2, 1, "Calça Jeans",      1, 149.90),
+            (3, 2, "Tênis Running Pro",1, 299.90),
         ]
         cursor.executemany("INSERT INTO itens_pedido VALUES (?,?,?,?,?)", itens)
 
