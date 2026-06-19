@@ -1,50 +1,51 @@
+import time
 from abc import ABC, abstractmethod
 from enum import Enum
-from datetime import datetime
 
 
 class AgentStatus(Enum):
-    IDLE = "idle"
+    PENDING = "pending"
     RUNNING = "running"
     SUCCESS = "success"
     ERROR = "error"
 
 
 class BaseAgent(ABC):
-    def __init__(self, name: str, description: str = ""):
+    def __init__(self, name: str, description: str):
         self.name = name
         self.description = description
-        self.status = AgentStatus.IDLE
-        self.result = None
+        self.status = AgentStatus.PENDING
         self.error = None
-        self.started_at = None
-        self.finished_at = None
+        self._start_time = None
+        self._end_time = None
+
+    def run(self, context: dict) -> dict:
+        self.status = AgentStatus.RUNNING
+        self._start_time = time.time()
+        try:
+            result = self.execute(context)
+            self.status = AgentStatus.SUCCESS
+            return result
+        except Exception as e:
+            self.status = AgentStatus.ERROR
+            self.error = str(e)
+            return {}
+        finally:
+            self._end_time = time.time()
+
+    def report(self) -> dict:
+        duration = None
+        if self._start_time and self._end_time:
+            duration = round(self._end_time - self._start_time, 2)
+        return {
+            "agent": self.name,
+            "status": self.status.value,
+            "error": self.error,
+            "duration_seconds": duration,
+        }
+
+    from abc import abstractmethod
 
     @abstractmethod
     def execute(self, context: dict) -> dict:
         pass
-
-    def run(self, context: dict) -> dict:
-        self.status = AgentStatus.RUNNING
-        self.started_at = datetime.now()
-        try:
-            self.result = self.execute(context)
-            self.status = AgentStatus.SUCCESS
-        except Exception as e:
-            self.error = str(e)
-            self.status = AgentStatus.ERROR
-            self.result = {"error": str(e)}
-        finally:
-            self.finished_at = datetime.now()
-        return self.result
-
-    def report(self) -> dict:
-        duration = None
-        if self.started_at and self.finished_at:
-            duration = round((self.finished_at - self.started_at).total_seconds(), 2)
-        return {
-            "agent": self.name,
-            "status": self.status.value,
-            "duration_seconds": duration,
-            "error": self.error,
-        }

@@ -1,34 +1,40 @@
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
+from datetime import datetime
 from agents.base_agent import BaseAgent
-from src.transformer import Transformer
 
 
 class TransformationAgent(BaseAgent):
-    """Sub-agente responsável por validar e normalizar os dados extraídos."""
-
-    def __init__(self, logger):
+    def __init__(self):
         super().__init__(
-            name="Agente de Transformação",
-            description="Valida campos obrigatórios, normaliza valores e prepara dados para carga.",
+            name="Agente de Transformacao",
+            description="Valida campos, normaliza dados e adiciona metadados de migracao.",
         )
-        self.logger = logger
 
     def execute(self, context: dict) -> dict:
-        dados_brutos = context.get("dados_brutos", {})
+        dados = context.get("dados_brutos", {})
+        produtos_transformados = []
+        invalidos = 0
 
-        if not dados_brutos:
-            raise RuntimeError("Nenhum dado disponível para transformação.")
+        for produto in dados.get("products", []):
+            if not produto.get("name") or not produto.get("description") or not produto.get("price"):
+                invalidos += 1
+                continue
+            if float(produto.get("price", 0)) <= 0:
+                invalidos += 1
+                continue
 
-        transformer = Transformer(self.logger)
-        dados_transformados = transformer.transformar(dados_brutos)
+            produtos_transformados.append({
+                "name": str(produto["name"]).strip().title(),
+                "description": str(produto["description"]).strip(),
+                "price": round(float(produto["price"]), 2),
+                "imageURL": produto.get("imageURL", ""),
+                "_migrado_em": datetime.now().isoformat(),
+                "_sistema_origem": "Sistema A (SQLite)",
+            })
 
-        total_transformado = sum(len(v) for v in dados_transformados.values())
+        print(f"    Transformados: {len(produtos_transformados)} validos, {invalidos} invalidos")
 
         return {
-            "dados_transformados": dados_transformados,
-            "colecoes_transformadas": list(dados_transformados.keys()),
-            "total_registros_transformados": total_transformado,
+            "dados_transformados": produtos_transformados,
+            "total_transformado": len(produtos_transformados),
+            "total_invalido": invalidos,
         }

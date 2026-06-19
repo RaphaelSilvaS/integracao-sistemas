@@ -1,42 +1,39 @@
-import sys
-import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-
+import json
+import requests
 from agents.base_agent import BaseAgent
-from src.loader import Loader
+
+FIREBASE_DB_URL = "https://projeto-integrador-303c5-default-rtdb.firebaseio.com"
 
 
 class LoadingAgent(BaseAgent):
-    """Sub-agente responsável por carregar os dados transformados no Sistema B (Firebase Destino)."""
-
-    def __init__(self, config_destino: dict, logger):
+    def __init__(self):
         super().__init__(
             name="Agente de Carga",
-            description="Conecta ao Sistema B (Firebase Destino) e carrega todos os dados transformados.",
+            description="Carrega os dados transformados no Firebase (Sistema B) via REST API.",
         )
-        self.config_destino = config_destino
-        self.logger = logger
 
     def execute(self, context: dict) -> dict:
-        dados_transformados = context.get("dados_transformados", {})
+        produtos = context.get("dados_transformados", [])
+        if not produtos:
+            raise RuntimeError("Nenhum dado transformado para carregar.")
 
-        if not dados_transformados:
-            raise RuntimeError("Nenhum dado transformado disponível para carga.")
+        carregados = 0
+        erros = 0
 
-        loader = Loader(self.config_destino, self.logger)
-
-        if not loader.autenticar():
-            raise RuntimeError("Falha na autenticação do Sistema B (Firebase Destino).")
-
-        resultados = loader.carregar_tudo(dados_transformados)
-
-        total_carregado = sum(
-            r.get("carregados", 0) for r in resultados.values()
-            if isinstance(r, dict)
-        )
+        for produto in produtos:
+            resp = requests.post(
+                f"{FIREBASE_DB_URL}/products.json",
+                data=json.dumps(produto),
+            )
+            if resp.status_code == 200:
+                carregados += 1
+                print(f"    [OK] {produto['name']}")
+            else:
+                erros += 1
+                print(f"    [ERRO] {produto['name']} — status {resp.status_code}")
 
         return {
-            "resultados_carga": resultados,
-            "total_registros_carregados": total_carregado,
-            "colecoes_carregadas": list(resultados.keys()),
+            "total_carregado": carregados,
+            "total_erro_carga": erros,
+            "firebase_url": f"{FIREBASE_DB_URL}/products.json",
         }

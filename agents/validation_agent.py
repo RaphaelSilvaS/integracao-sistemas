@@ -1,68 +1,69 @@
 import json
 import re
-import anthropic
-
+from groq import Groq
 from agents.base_agent import BaseAgent
 
 
 class ValidationAgent(BaseAgent):
-    """Sub-agente que usa IA (Claude) para analisar a qualidade dos dados extraídos."""
-
     def __init__(self, api_key: str):
         super().__init__(
-            name="Agente de Validação IA",
-            description="Usa Claude (Anthropic) para detectar anomalias e avaliar qualidade dos dados.",
+            name="Agente de Validacao IA",
+            description="Usa IA (Groq/Llama) para detectar anomalias e avaliar qualidade dos dados.",
         )
-        self.client = anthropic.Anthropic(api_key=api_key)
+        self.client = Groq(api_key=api_key)
 
     def execute(self, context: dict) -> dict:
-        dados_brutos = context.get("dados_brutos", {})
+        dados = context.get("dados_brutos", {})
+        if not dados:
+            raise RuntimeError("Nenhum dado disponivel para validacao.")
 
-        if not dados_brutos:
-            raise RuntimeError("Nenhum dado disponível para validação.")
+        amostra = {
+            col: registros[:5] if isinstance(registros, list) else registros
+            for col, registros in dados.items()
+        }
 
-        # Prepara amostra para não exceder tokens
-        amostra = {}
-        for colecao, registros in dados_brutos.items():
-            amostra[colecao] = registros[:5] if isinstance(registros, list) else registros
+        prompt = f"""Voce e um agente especializado em validacao de dados para pipelines ETL.
 
-        prompt = f"""Você é um agente especializado em validação de dados para pipelines ETL.
+Analise os dados abaixo extraidos do Sistema A e retorne uma avaliacao estruturada.
 
-Analise a amostra de dados abaixo, extraída do Sistema A (Firebase), e retorne uma avaliação estruturada.
-
-DADOS EXTRAÍDOS:
+DADOS EXTRAIDOS:
 {json.dumps(amostra, ensure_ascii=False, indent=2)}
 
 Identifique:
-1. Anomalias e inconsistências (campos vazios, valores negativos, tipos incorretos)
+1. Anomalias e inconsistencias (campos vazios, valores negativos, tipos incorretos)
 2. Score de qualidade geral dos dados (0 a 100)
 3. Se o pipeline deve prosseguir ou ser interrompido
 
-Responda APENAS com um JSON válido neste formato exato:
+Responda APENAS com um JSON valido neste formato exato:
 {{
   "qualidade_score": <inteiro 0-100>,
   "anomalias": ["lista de anomalias encontradas"],
-  "colecoes_avaliadas": ["lista de coleções analisadas"],
-  "decisao": "prosseguir" ou "interromper",
-  "justificativa": "<motivo da decisão em português>"
+  "colecoes_avaliadas": ["lista de colecoes analisadas"],
+  "decisao": "prosseguir",
+  "justificativa": "<motivo da decisao em portugues>"
 }}"""
 
-        response = self.client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=1024,
+        response = self.client.chat.completions.create(
+            model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": prompt}],
+            max_tokens=1024,
         )
 
-        texto = response.content[0].text
+        texto = response.choices[0].message.content
         match = re.search(r"\{.*\}", texto, re.DOTALL)
         if not match:
             raise RuntimeError("IA retornou resposta em formato inesperado.")
 
         analise = json.loads(match.group())
+        print(f"    Score de qualidade: {analise.get('qualidade_score')}/100")
+        print(f"    Decisao IA: {analise.get('decisao')}")
+        if analise.get("anomalias"):
+            for a in analise["anomalias"]:
+                print(f"    - Anomalia: {a}")
 
         if analise.get("decisao") == "interromper":
             raise RuntimeError(
-                f"Validação IA interrompeu o pipeline: {analise.get('justificativa')}"
+                f"IA interrompeu o pipeline: {analise.get('justificativa')}"
             )
 
         return {
