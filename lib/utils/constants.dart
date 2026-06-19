@@ -5,10 +5,10 @@ class Constants {
   // =====================================================
 
   // Web API Key — Firebase Console > Configurações do Projeto > Web API Key
-  static const FIREBASE_API_KEY = 'AIzaSyBjzyh1DgWZBm0968oZ89MPOiZofA02Gd4';
+  static const FIREBASE_API_KEY = 'AIzaSyCKNk9uRu0Xwk9oYdjpioHyXUOkv1NRrNY';
 
   // URL do Realtime Database — Firebase Console > Realtime Database > URL
-  static const FIREBASE_DB_URL = 'https://shop-app-fl-default-rtdb.firebaseio.com';
+  static const FIREBASE_DB_URL = 'https://projeto-integrador-303c5-default-rtdb.firebaseio.com';
 
   // =====================================================
   // URLs da API — não altere abaixo desta linha
