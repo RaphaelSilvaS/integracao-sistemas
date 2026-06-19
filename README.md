@@ -1,30 +1,53 @@
-# Virtual Store — Loja Virtual com Flutter e Firebase
+# Integração de Sistemas — Loja Virtual com Firebase
 
-Aplicativo mobile de loja virtual desenvolvido em **Flutter (Dart)**, integrado com **Firebase** (Realtime Database + Authentication). Sem APIs pagas — Firebase possui plano gratuito.
+Projeto de integração entre dois sistemas distintos via **Firebase Realtime Database**,
+utilizando **Python** (Sistema A) e **Flutter/Dart** (Sistema B).
 
 ---
 
-## Funcionalidades
+## Arquitetura de Integração
 
-- Cadastro e login de usuários (Firebase Authentication)
-- Listagem de produtos com imagem, nome e preço
-- Favoritar produtos por usuário
-- Carrinho de compras
-- Histórico de pedidos
-- Gerenciamento de produtos (adicionar, editar, remover)
+```
+┌──────────────────────────────────────────────────────────────┐
+│                    SISTEMA A — Python                        │
+│  seed_firebase.py                                            │
+│  - Gera dados brutos dos produtos                            │
+│  - Valida campos obrigatórios e preços                       │
+│  - Transforma e normaliza os dados                           │
+│  - Carrega no Firebase via REST API                          │
+└─────────────────────────┬────────────────────────────────────┘
+                          │  HTTP REST (JSON)
+                          ▼
+          ┌───────────────────────────────┐
+          │   Firebase Realtime Database  │
+          │   (projeto-integrador-303c5)  │
+          │   /products   /orders         │
+          └───────────────┬───────────────┘
+                          │  HTTP REST (JSON)
+                          ▼
+┌──────────────────────────────────────────────────────────────┐
+│                    SISTEMA B — Flutter/Dart                  │
+│  App Mobile (Android/iOS/Web)                                │
+│  - Autentica usuário via Firebase Auth                       │
+│  - Lê produtos do Firebase em tempo real                     │
+│  - Exibe loja com carrinho e pedidos                         │
+│  - Grava pedidos de volta no Firebase                        │
+└──────────────────────────────────────────────────────────────┘
+```
+
+**Interoperabilidade:** Python escreve → Firebase centraliza → Flutter lê.
+Dois sistemas em linguagens diferentes comunicando via mesma API REST.
 
 ---
 
 ## Tecnologias
 
-| Tecnologia | Uso |
-|---|---|
-| Flutter / Dart | App mobile (Android e iOS) |
-| Firebase Authentication | Login e cadastro de usuários |
-| Firebase Realtime Database | Armazenamento de produtos, pedidos e favoritos |
-| Provider | Gerenciamento de estado |
-| http | Comunicação REST com Firebase |
-| shared_preferences | Persistência local do token de autenticação |
+| Sistema | Linguagem | Tecnologia | Função |
+|---|---|---|---|
+| Sistema A | Python | requests | Popula o Firebase com produtos validados |
+| Banco Central | — | Firebase Realtime Database | Armazena e sincroniza dados entre sistemas |
+| Sistema B | Dart/Flutter | http, Provider | App mobile que consome os dados do Firebase |
+| Autenticação | — | Firebase Authentication | Login/cadastro de usuários (e-mail e senha) |
 
 ---
 
@@ -32,110 +55,141 @@ Aplicativo mobile de loja virtual desenvolvido em **Flutter (Dart)**, integrado 
 
 ### Pré-requisitos
 
-- [Flutter SDK](https://docs.flutter.dev/get-started/install) instalado
-- Emulador Android/iOS ou dispositivo físico conectado
-- Conta Google (para criar o Firebase — gratuito)
+- Python 3.10+ instalado
+- Flutter SDK instalado
+- Conta Firebase configurada (veja configuração abaixo)
 
-### 1. Clone o repositório
+---
+
+### Passo 1 — Clone o repositório
 
 ```bash
 git clone https://github.com/RaphaelSilvaS/integracao-sistemas.git
 cd integracao-sistemas
 ```
 
-### 2. Configure o Firebase (GRATUITO — 15 minutos)
+---
 
-> Se o professor quiser rodar com os dados do projeto original, pule para o passo 3.
+### Passo 2 — Execute o Sistema A (Python)
 
-**2.1 — Crie um projeto Firebase**
+O Sistema A popula o Firebase com produtos validados:
 
-1. Acesse [console.firebase.google.com](https://console.firebase.google.com)
-2. Clique em **Adicionar projeto** > dê um nome > continue
-3. Desative Google Analytics (opcional) > **Criar projeto**
-
-**2.2 — Ative o Realtime Database**
-
-1. No menu lateral: **Compilar > Realtime Database**
-2. Clique em **Criar banco de dados**
-3. Escolha a região (ex: `us-central1`) > **Próximo**
-4. Selecione **Iniciar no modo de teste** > **Ativar**
-5. Copie a URL do banco (ex: `https://SEU-PROJETO-default-rtdb.firebaseio.com`)
-
-**2.3 — Ative a Autenticação**
-
-1. No menu lateral: **Compilar > Authentication**
-2. Clique em **Primeiros passos**
-3. Na aba **Método de login**, ative **E-mail/senha** > Salvar
-
-**2.4 — Copie a Web API Key**
-
-1. No menu lateral: **Configurações do projeto** (ícone de engrenagem)
-2. Na aba **Geral**, copie o campo **Chave da API da Web**
-
-**2.5 — Cole no código**
-
-Edite o arquivo [`lib/utils/constants.dart`](lib/utils/constants.dart):
-
-```dart
-static const FIREBASE_API_KEY = 'SUA_CHAVE_AQUI';
-static const FIREBASE_DB_URL = 'https://SEU-PROJETO-default-rtdb.firebaseio.com';
+```bash
+python seed_firebase.py
 ```
 
-### 3. Instale as dependências e rode
+Saída esperada:
+```
+Validando e carregando produtos no Firebase...
+  [OK] Camiseta Básica Branca
+  [OK] Calça Jeans Slim
+  [OK] Tênis Casual Branco
+  ...
+Concluido! 8 produtos carregados no Firebase.
+```
+
+---
+
+### Passo 3 — Execute o Sistema B (Flutter)
+
+O Sistema B lê os dados que o Sistema A carregou:
 
 ```bash
 flutter pub get
-flutter run
+flutter run -d chrome
 ```
+
+O app abre no navegador. Crie uma conta com e-mail e senha para ver os produtos.
+
+---
+
+## Configuração do Firebase
+
+As credenciais já estão configuradas em `lib/utils/constants.dart`:
+
+```dart
+static const FIREBASE_API_KEY = 'AIzaSyCKNk9uRu0Xwk9oYdjpioHyXUOkv1NRrNY';
+static const FIREBASE_DB_URL = 'https://projeto-integrador-303c5-default-rtdb.firebaseio.com';
+```
+
+Para usar seu próprio Firebase:
+1. Acesse [console.firebase.google.com](https://console.firebase.google.com)
+2. Crie um projeto → ative Realtime Database (modo teste) → ative Authentication (E-mail/senha)
+3. Substitua os valores acima com suas credenciais
 
 ---
 
 ## Estrutura do Projeto
 
 ```
-lib/
-├── components/
-│   ├── auth_form.dart          # Formulário de login/cadastro
-│   ├── badge.dart              # Badge do carrinho
-│   ├── cart_items.dart         # Item do carrinho
-│   ├── main_drawer.dart        # Menu lateral
-│   ├── order_item.dart         # Item de pedido
-│   ├── product_grid_item.dart  # Card de produto
-│   └── product_gridview.dart   # Grade de produtos
-├── models/
-│   ├── auth.dart               # Autenticação Firebase
-│   ├── cart_item.dart          # Modelo de item do carrinho
-│   ├── order_list.dart         # Lista de pedidos (Firebase)
-│   ├── order_model.dart        # Modelo de pedido
-│   └── product_model.dart      # Modelo de produto
-├── providers/
-│   ├── cart.dart               # Carrinho de compras
-│   ├── counter.dart            # Contador simples
-│   └── product_list.dart       # Lista de produtos (Firebase)
-├── screens/
-│   ├── auth_screen.dart        # Tela de login/cadastro
-│   ├── cart_screen.dart        # Tela do carrinho
-│   ├── orders_screen.dart      # Histórico de pedidos
-│   ├── product_details_screen.dart  # Detalhe do produto
-│   ├── product_form_screen.dart     # Formulário de produto
-│   ├── products_overview_screen.dart # Home — grade de produtos
-│   └── products_screen.dart    # Gerenciar produtos
-├── utils/
-│   ├── constants.dart          # CONFIGURAÇÃO FIREBASE (edite aqui)
-│   └── routes/app_routes.dart  # Rotas da aplicação
-└── main.dart                   # Ponto de entrada
+integracao-sistemas/
+│
+├── seed_firebase.py            # SISTEMA A — Python: valida e carrega produtos
+│
+├── lib/                        # SISTEMA B — Flutter/Dart
+│   ├── main.dart               # Ponto de entrada do app
+│   ├── models/
+│   │   ├── auth.dart           # Autenticação Firebase (login/cadastro)
+│   │   ├── product_model.dart  # Modelo de produto
+│   │   ├── order_list.dart     # Pedidos (leitura e escrita no Firebase)
+│   │   └── order_model.dart    # Modelo de pedido
+│   ├── providers/
+│   │   ├── product_list.dart   # CRUD de produtos via Firebase REST
+│   │   └── cart.dart           # Carrinho de compras (estado local)
+│   ├── screens/
+│   │   ├── auth_screen.dart           # Tela de login/cadastro
+│   │   ├── products_overview_screen.dart  # Home — grade de produtos
+│   │   ├── product_details_screen.dart    # Detalhes do produto
+│   │   ├── product_form_screen.dart       # Formulário (admin)
+│   │   ├── cart_screen.dart              # Carrinho
+│   │   └── orders_screen.dart            # Histórico de pedidos
+│   └── utils/
+│       └── constants.dart      # Credenciais Firebase (edite aqui)
+│
+├── android/                    # Configuração Android
+├── ios/                        # Configuração iOS
+├── assets/                     # Fontes e imagens
+└── pubspec.yaml                # Dependências Flutter
 ```
 
 ---
 
-## Integração com Firebase
+## Fluxo de Dados (Interoperabilidade)
 
-O app se comunica com o Firebase via **REST API** — sem SDK adicional. Todas as chamadas usam o pacote `http`:
+```
+1. seed_firebase.py (Python)
+   └─ gera 8 produtos de roupas/calçados
+   └─ valida: nome ≥ 3 chars, preço > 0, descrição ≥ 10 chars
+   └─ POST /products.json → Firebase
 
-- **Autenticação:** `identitytoolkit.googleapis.com` (login e cadastro)
-- **Produtos/Pedidos/Favoritos:** `firebaseio.com` (leitura e escrita via JSON)
+2. Firebase Realtime Database
+   └─ armazena os dados em formato JSON
+   └─ URL pública REST: .../products.json
 
-O token de autenticação do Firebase é passado em cada requisição como parâmetro `?auth=TOKEN`, garantindo segurança dos dados por usuário.
+3. Flutter App (Dart)
+   └─ ProductsList.loadProducts() → GET /products.json?auth=TOKEN
+   └─ exibe produtos em grade com nome e preço
+   └─ usuário pode favoritar, adicionar ao carrinho, fazer pedido
+   └─ pedido → POST /orders/{userId}.json → Firebase
+```
+
+---
+
+## Git — Histórico de Commits
+
+```
+2a91d9e  Remove campo de imagem obrigatorio e adiciona script de seed
+a9ce697  Configura credenciais do Firebase do projeto integrador
+538deff  Migra projeto para loja virtual Flutter com Firebase
+98bbb29  fix: alinha dados do demo_agentes.py com demo.py
+de2eee8  docs: separa modo demo do modo producao no README
+892c336  feat: adiciona modo demo dos agentes (SQLite -> JSON)
+47891b2  feat: adiciona arquitetura multi-agente com validacao por IA
+6fc85d9  fix: README e terminologia alinhados com os dois sistemas
+5194661  chore: adiciona dados gerados pelo demo
+84a55e3  refactor: ETL com dois sistemas distintos (SQLite e JSON)
+7418ae5  feat: pipeline ETL Firebase-to-Firebase - Projeto Integrador
+```
 
 ---
 
@@ -144,7 +198,7 @@ O token de autenticação do Firebase é passado em cada requisição como parâ
 | Recurso | Limite gratuito |
 |---|---|
 | Usuários autenticados | Ilimitado |
-| Realtime Database | 1 GB armazenamento / 10 GB/mês transferência |
+| Realtime Database | 1 GB armazenamento / 10 GB/mês |
 | Requests | Ilimitado |
 
-Suficiente para desenvolvimento e demonstração acadêmica.
+**Nenhuma API paga é utilizada neste projeto.**

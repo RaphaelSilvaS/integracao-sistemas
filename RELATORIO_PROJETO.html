@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<style>
+  body { font-family: Calibri, Arial, sans-serif; margin: 2.5cm; color: #000; font-size: 12pt; }
+  h1 { font-size: 18pt; text-align: center; margin-bottom: 4pt; }
+  h2 { font-size: 14pt; border-bottom: 1px solid #333; padding-bottom: 4pt; margin-top: 24pt; }
+  h3 { font-size: 12pt; margin-top: 16pt; }
+  table { border-collapse: collapse; width: 100%; margin: 12pt 0; }
+  th { background: #2c3e50; color: #fff; padding: 6pt 8pt; text-align: left; }
+  td { border: 1px solid #ccc; padding: 5pt 8pt; vertical-align: top; }
+  tr:nth-child(even) td { background: #f5f5f5; }
+  pre, code { background: #f4f4f4; border: 1px solid #ddd; padding: 8pt; font-family: Courier New, monospace; font-size: 10pt; display: block; white-space: pre-wrap; }
+  .destaque { background: #eaf4fb; border-left: 4px solid #2980b9; padding: 8pt 12pt; margin: 12pt 0; }
+  .ok { color: #27ae60; font-weight: bold; }
+  .warn { color: #e67e22; font-weight: bold; }
+  .subtitle { text-align: center; color: #555; font-size: 11pt; margin-bottom: 20pt; }
+  .pagebreak { page-break-before: always; }
+  ul li { margin-bottom: 4pt; }
+</style>
+</head>
+<body>
+
+<h1>Integração de Sistemas — Loja Virtual com Firebase</h1>
+<p class="subtitle">
+  Raphael Silva Santos &nbsp;|&nbsp; raphasilva4556@gmail.com<br>
+  Repositório: <strong>github.com/RaphaelSilvaS/integracao-sistemas</strong><br>
+  Data de entrega: 19/06/2026
+</p>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>1. Descrição do Projeto</h2>
+<p>
+  Projeto de <strong>integração entre dois sistemas</strong> utilizando Firebase Realtime Database
+  como camada de interoperabilidade. O Sistema A (Python) atua como pipeline ETL que valida,
+  transforma e carrega dados. O Sistema B (Flutter/Dart) é um aplicativo mobile que consome
+  esses dados e oferece uma loja virtual completa com autenticação, carrinho e pedidos.
+</p>
+<div class="destaque">
+  <strong>Sem APIs pagas.</strong> O projeto utiliza exclusivamente o plano gratuito do Firebase
+  (Spark Plan: autenticação ilimitada, 1 GB de banco de dados, 10 GB/mês de transferência).
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>2. Arquitetura de Integração</h2>
+
+<table>
+  <tr>
+    <th>Sistema</th>
+    <th>Linguagem</th>
+    <th>Tecnologia</th>
+    <th>Função</th>
+  </tr>
+  <tr>
+    <td><strong>Sistema A</strong></td>
+    <td>Python 3.10+</td>
+    <td>requests (HTTP REST)</td>
+    <td>Pipeline ETL: valida, transforma e carrega produtos no Firebase</td>
+  </tr>
+  <tr>
+    <td><strong>Banco Central</strong></td>
+    <td>—</td>
+    <td>Firebase Realtime Database</td>
+    <td>Armazena e sincroniza dados entre os dois sistemas via REST API</td>
+  </tr>
+  <tr>
+    <td><strong>Sistema B</strong></td>
+    <td>Dart / Flutter</td>
+    <td>http, Provider, shared_preferences</td>
+    <td>App mobile: consome os dados do Firebase e exibe a loja virtual</td>
+  </tr>
+  <tr>
+    <td><strong>Autenticação</strong></td>
+    <td>—</td>
+    <td>Firebase Authentication</td>
+    <td>Login e cadastro de usuários por e-mail e senha</td>
+  </tr>
+</table>
+
+<h3>Fluxo de Dados</h3>
+<pre>
+┌─────────────────────────────────────────────────────────────┐
+│              SISTEMA A — Python (seed_firebase.py)           │
+│                                                              │
+│  1. Gera dados brutos dos produtos (8 itens de vestuário)    │
+│  2. Valida: nome ≥ 3 chars, preço > 0, descrição ≥ 10 chars │
+│  3. Transforma: normaliza strings, arredonda preços          │
+│  4. Carrega: POST /products.json via REST API                │
+└─────────────────────────────┬───────────────────────────────┘
+                              │  HTTP REST (JSON)
+                              ▼
+              ┌───────────────────────────────┐
+              │   Firebase Realtime Database   │
+              │  /products  /orders /favorites │
+              └───────────────┬───────────────┘
+                              │  HTTP REST (JSON + Auth Token)
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│              SISTEMA B — Flutter App (Dart)                  │
+│                                                              │
+│  1. Usuário faz login via Firebase Authentication            │
+│  2. App lê /products.json com token de autenticação          │
+│  3. Exibe produtos em grade com favoritos e carrinho         │
+│  4. Pedido confirmado → POST /orders/{userId}.json           │
+└─────────────────────────────────────────────────────────────┘
+</pre>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="pagebreak">3. Sistema A — Pipeline ETL (Python)</h2>
+
+<h3>Arquivo: <code>seed_firebase.py</code></h3>
+<p>Pipeline ETL em 3 etapas: Validação → Transformação → Carga.</p>
+
+<pre>
+# Agente de Validação (regras locais, sem API externa)
+def validar_produto(produto):
+    erros = []
+    if len(produto["name"].strip()) &lt; 3:
+        erros.append("Nome inválido")
+    if len(produto["description"].strip()) &lt; 10:
+        erros.append("Descrição inválida")
+    if produto["price"] &lt;= 0:
+        erros.append("Preço inválido")
+    return len(erros) == 0, erros
+
+# Agente de Transformação
+def transformar_produto(produto):
+    return {
+        "name": produto["name"].strip(),
+        "price": round(float(produto["price"]), 2),
+        "_migrado_em": datetime.now().isoformat(),
+        "_sistema_origem": "Sistema A (Python)",
+    }
+
+# Agente de Carga — envia para Firebase (Sistema B)
+def carregar_produto(produto):
+    resp = requests.post(f"{FIREBASE_DB_URL}/products.json",
+                         data=json.dumps(produto))
+    return resp.status_code == 200
+</pre>
+
+<h3>Produtos carregados no Firebase</h3>
+<table>
+  <tr><th>#</th><th>Nome</th><th>Preço</th><th>Status</th></tr>
+  <tr><td>1</td><td>Camiseta Básica Branca</td><td>R$ 49,90</td><td class="ok">✔ Válido</td></tr>
+  <tr><td>2</td><td>Calça Jeans Slim</td><td>R$ 129,90</td><td class="ok">✔ Válido</td></tr>
+  <tr><td>3</td><td>Tênis Casual Branco</td><td>R$ 199,90</td><td class="ok">✔ Válido</td></tr>
+  <tr><td>4</td><td>Moletom Canguru Cinza</td><td>R$ 89,90</td><td class="ok">✔ Válido</td></tr>
+  <tr><td>5</td><td>Jaqueta Corta-Vento Preta</td><td>R$ 159,90</td><td class="ok">✔ Válido</td></tr>
+  <tr><td>6</td><td>Bermuda Tactel Azul</td><td>R$ 59,90</td><td class="ok">✔ Válido</td></tr>
+  <tr><td>7</td><td>Vestido Floral Colorido</td><td>R$ 119,90</td><td class="ok">✔ Válido</td></tr>
+  <tr><td>8</td><td>Polo Listrada Premium</td><td>R$ 79,90</td><td class="ok">✔ Válido</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="pagebreak">4. Sistema B — App Flutter (Dart)</h2>
+
+<h3>Funcionalidades</h3>
+<ul>
+  <li>Cadastro e login via Firebase Authentication (e-mail e senha)</li>
+  <li>Listagem de produtos em grade com nome e preço</li>
+  <li>Favoritar produtos por usuário (salvo no Firebase)</li>
+  <li>Carrinho de compras com desfazer adição</li>
+  <li>Histórico de pedidos por usuário</li>
+  <li>Gerenciamento de produtos: adicionar, editar, remover (admin)</li>
+  <li>Modo escuro automático (segue o sistema do dispositivo)</li>
+</ul>
+
+<h3>Configuração Firebase (constants.dart)</h3>
+<pre>
+class Constants {
+  // Web API Key — Firebase Console > Configurações do Projeto
+  static const FIREBASE_API_KEY = 'AIzaSyCKNk9uRu0Xwk9oYdjpioHyXUOkv1NRrNY';
+
+  // URL do Realtime Database
+  static const FIREBASE_DB_URL =
+      'https://projeto-integrador-303c5-default-rtdb.firebaseio.com';
+
+  // URLs das coleções
+  static const USER_FAVORITES_URL = '$FIREBASE_DB_URL/userFavorites';
+  static const PRODUCT_BASE_URL   = '$FIREBASE_DB_URL/products';
+  static const ORDER_BASE_URL     = '$FIREBASE_DB_URL/orders';
+}
+</pre>
+
+<h3>Autenticação (auth.dart)</h3>
+<pre>
+Future&lt;void&gt; _authenticate(String email, String password, String urlFragment) async {
+  final url =
+    'https://identitytoolkit.googleapis.com/v1/accounts:$urlFragment'
+    '?key=${Constants.FIREBASE_API_KEY}';
+
+  final response = await http.post(Uri.parse(url),
+    body: jsonEncode({
+      'email': email,
+      'password': password,
+      'returnSecureToken': true,
+    }),
+  );
+  // Token salvo localmente via shared_preferences
+}
+</pre>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2 class="pagebreak">5. Como Reproduzir o Ambiente</h2>
+
+<h3>Pré-requisitos</h3>
+<ul>
+  <li>Python 3.10+ (<code>python --version</code>)</li>
+  <li>Flutter SDK (<code>flutter --version</code>)</li>
+  <li>Navegador Chrome ou celular Android com Depuração USB ativada</li>
+</ul>
+
+<h3>Passo a Passo</h3>
+<pre>
+# 1. Clone o repositório
+git clone https://github.com/RaphaelSilvaS/integracao-sistemas.git
+cd integracao-sistemas
+
+# 2. Execute o Sistema A (Python) — popula o Firebase
+python seed_firebase.py
+
+# 3. Instale dependências do Flutter
+flutter pub get
+
+# 4. Execute o Sistema B (Flutter) — abre no Chrome
+flutter run -d chrome
+
+# Ou em celular Android conectado via USB:
+flutter run
+</pre>
+
+<div class="destaque">
+  <strong>Nenhuma chave de API paga é necessária.</strong><br>
+  Firebase Auth e Realtime Database são gratuitos no plano Spark.
+</div>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>6. Histórico Git</h2>
+
+<table>
+  <tr><th>Commit</th><th>Mensagem</th></tr>
+  <tr><td><code>2a91d9e</code></td><td>Remove campo de imagem obrigatório e adiciona script de seed</td></tr>
+  <tr><td><code>a9ce697</code></td><td>Configura credenciais do Firebase do projeto integrador</td></tr>
+  <tr><td><code>538deff</code></td><td>Migra projeto para loja virtual Flutter com Firebase</td></tr>
+  <tr><td><code>98bbb29</code></td><td>fix: alinha dados do demo_agentes.py com demo.py</td></tr>
+  <tr><td><code>de2eee8</code></td><td>docs: separa modo demo do modo produção no README</td></tr>
+  <tr><td><code>892c336</code></td><td>feat: adiciona modo demo dos agentes (SQLite → JSON)</td></tr>
+  <tr><td><code>47891b2</code></td><td>feat: adiciona arquitetura multi-agente com validação por IA</td></tr>
+  <tr><td><code>6fc85d9</code></td><td>fix: README e terminologia alinhados com os dois sistemas</td></tr>
+  <tr><td><code>84a55e3</code></td><td>refactor: ETL com dois sistemas distintos (SQLite e JSON)</td></tr>
+  <tr><td><code>7418ae5</code></td><td>feat: pipeline ETL Firebase-to-Firebase — Projeto Integrador</td></tr>
+</table>
+
+<!-- ═══════════════════════════════════════════════════════ -->
+<h2>7. Verificação de Requisitos</h2>
+
+<table>
+  <tr><th>Requisito</th><th>Status</th><th>Como foi atendido</th></tr>
+  <tr>
+    <td>Integração entre dois sistemas</td>
+    <td class="ok">✔ Atendido</td>
+    <td>Python (Sistema A) e Flutter (Sistema B) comunicam via Firebase REST API</td>
+  </tr>
+  <tr>
+    <td>Mais de uma linguagem</td>
+    <td class="ok">✔ Atendido</td>
+    <td>Python (seed_firebase.py) + Dart/Flutter (app mobile)</td>
+  </tr>
+  <tr>
+    <td>Firebase / Banco de dados</td>
+    <td class="ok">✔ Atendido</td>
+    <td>Firebase Realtime Database (produtos, pedidos, favoritos) + Firebase Authentication</td>
+  </tr>
+  <tr>
+    <td>ETL / Transformação de dados</td>
+    <td class="ok">✔ Atendido</td>
+    <td>seed_firebase.py: validação → transformação → carga no Firebase</td>
+  </tr>
+  <tr>
+    <td>Interoperabilidade entre sistemas</td>
+    <td class="ok">✔ Atendido</td>
+    <td>Dados escritos por Python são lidos pelo Flutter em tempo real</td>
+  </tr>
+  <tr>
+    <td>Git com histórico de commits</td>
+    <td class="ok">✔ Atendido</td>
+    <td>10 commits documentados no GitHub com mensagens descritivas</td>
+  </tr>
+  <tr>
+    <td>Funcional sem custos</td>
+    <td class="ok">✔ Atendido</td>
+    <td>Firebase Spark (gratuito), sem Claude API, sem nenhuma API paga</td>
+  </tr>
+</table>
+
+<br>
+<p style="text-align:center; color:#777; font-size:10pt;">
+  Documento gerado em 19/06/2026 &nbsp;|&nbsp; github.com/RaphaelSilvaS/integracao-sistemas
+</p>
+
+</body>
+</html>
