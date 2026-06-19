@@ -1,185 +1,17 @@
-# Pipeline ETL Multi-Agente com IA
+# Virtual Store — Loja Virtual com Flutter e Firebase
 
-Sistema de integração de dados entre dois ambientes Firebase, utilizando arquitetura de agentes autônomos com validação inteligente via IA (Claude — Anthropic).
-
----
-
-## Sistemas Envolvidos
-
-| | Sistema A | Sistema B |
-|---|---|---|
-| **Tipo** | Firebase Realtime Database (Origem) | Firebase Realtime Database (Destino) |
-| **Papel** | Fornece os dados brutos | Recebe os dados validados e normalizados |
-| **Config** | `config/settings.py → FIREBASE_ORIGEM` | `config/settings.py → FIREBASE_DESTINO` |
+Aplicativo mobile de loja virtual desenvolvido em **Flutter (Dart)**, integrado com **Firebase** (Realtime Database + Authentication). Sem APIs pagas — Firebase possui plano gratuito.
 
 ---
 
-## Arquitetura de Agentes
+## Funcionalidades
 
-O pipeline é composto por **1 agente orquestrador** e **4 sub-agentes especializados**, cada um com responsabilidade única e autônoma.
-
-```
-┌─────────────────────────────────────────────┐
-│           AGENTE ORQUESTRADOR               │
-│   Coordena o fluxo e o contexto compartilhado│
-└────────────────────┬────────────────────────┘
-                     │
-     ┌───────────────┼───────────────────┐
-     ▼               ▼                   ▼
-┌─────────┐   ┌────────────┐   ┌──────────────┐
-│Sub-agente│   │ Sub-agente │   │  Sub-agente  │
-│Extração  │──▶│Validação IA│──▶│Transformação │
-│          │   │  (Claude)  │   │              │
-└─────────┘   └────────────┘   └──────┬───────┘
-                                       │
-                          ┌────────────┴──────────┐
-                          ▼                        ▼
-                   ┌────────────┐         ┌──────────────┐
-                   │ Sub-agente │         │  Sub-agente  │
-                   │   Carga    │         │ Monitoramento│
-                   │(Sistema B) │         │  (Relatório) │
-                   └────────────┘         └──────────────┘
-```
-
-### Agente Orquestrador — `agents/orchestrator_agent.py`
-
-Responsável por inicializar e coordenar todos os sub-agentes em sequência. Gerencia o contexto compartilhado entre eles e interrompe o pipeline em caso de falha crítica.
-
-### Sub-agente de Extração — `agents/extraction_agent.py`
-
-Conecta ao **Sistema A** (Firebase Origem), autentica via API REST e extrai todas as coleções configuradas (`products`, `orders`). Retorna os dados brutos para o contexto compartilhado.
-
-### Sub-agente de Validação IA — `agents/validation_agent.py`
-
-Envia uma amostra dos dados extraídos para o modelo **Claude (Anthropic)** e recebe:
-
-- **Score de qualidade** dos dados (0 a 100)
-- **Lista de anomalias** detectadas automaticamente (campos vazios, preços negativos, formatos inválidos)
-- **Decisão autônoma**: `prosseguir` ou `interromper` o pipeline
-
-Este agente resolve a **complexidade** do projeto — a IA analisa padrões que regras fixas não conseguem detectar.
-
-### Sub-agente de Transformação — `agents/transformation_agent.py`
-
-Valida campos obrigatórios, normaliza strings, arredonda valores numéricos e adiciona metadados de migração (timestamp, ID de origem). Apenas registros válidos seguem para a carga.
-
-### Sub-agente de Carga — `agents/loading_agent.py`
-
-Conecta ao **Sistema B** (Firebase Destino), autentica e carrega os dados transformados coleção a coleção via requisições PUT, preservando os IDs originais.
-
-### Sub-agente de Monitoramento — `agents/monitoring_agent.py`
-
-Consolida as métricas de todos os agentes e gera um relatório JSON em `dados/relatorios/`. Exibe no terminal um sumário com totais de registros extraídos, validados, transformados e carregados.
-
----
-
-## Estrutura do Projeto
-
-```
-integracao-firebase/
-├── agents/
-│   ├── base_agent.py           # Classe abstrata base para todos os agentes
-│   ├── orchestrator_agent.py   # Agente Orquestrador
-│   ├── extraction_agent.py     # Sub-agente: extração do Sistema A
-│   ├── validation_agent.py     # Sub-agente: validação por IA (Claude)
-│   ├── transformation_agent.py # Sub-agente: transformação dos dados
-│   ├── loading_agent.py        # Sub-agente: carga no Sistema B
-│   └── monitoring_agent.py     # Sub-agente: métricas e relatório
-├── src/
-│   ├── extractor.py            # Comunicação com Firebase Origem
-│   ├── transformer.py          # Regras de validação e normalização
-│   ├── loader.py               # Comunicação com Firebase Destino
-│   └── logger.py               # Logger colorido com contadores
-├── config/
-│   └── settings.py             # Credenciais dos dois sistemas Firebase
-├── dados/
-│   └── relatorios/             # Relatórios gerados automaticamente
-├── main_agentes.py             # Ponto de entrada (modo agentes + IA)
-├── main.py                     # Ponto de entrada (modo produção original)
-├── demo.py                     # Modo demonstração local (sem Firebase)
-└── requirements.txt
-```
-
----
-
-## Como Reproduzir o Ambiente
-
-### Modo Demo — recomendado para validação (sem Firebase)
-
-**Pré-requisito único:** Chave de API da [Anthropic (Claude)](https://console.anthropic.com/)
-
-```bash
-# 1. Clone o repositório
-git clone https://github.com/RaphaelSilvaS/integracao-sistemas.git
-cd integracao-sistemas
-
-# 2. Instale as dependências
-pip install -r requirements.txt
-
-# 3. Configure a chave da API (Windows)
-set ANTHROPIC_API_KEY=sua_chave_aqui
-
-# 4. Execute
-python demo_agentes.py
-```
-
-O Sistema A (SQLite) e o Sistema B (JSON) são criados automaticamente na pasta `dados/`. Nenhuma conta Firebase é necessária.
-
----
-
-### Modo Produção — Firebase real (opcional)
-
-**Pré-requisitos:** Dois projetos Firebase + Chave Anthropic
-
-Edite `config/settings.py` com as credenciais dos dois projetos Firebase:
-
-```python
-FIREBASE_ORIGEM = {
-    "url": "https://seu-projeto-origem.firebaseio.com",
-    "api_key": "SUA_API_KEY_ORIGEM",
-    "email": "seu@email.com",
-    "password": "sua_senha",
-    "colecoes": ["products", "orders"]
-}
-
-FIREBASE_DESTINO = {
-    "url": "https://seu-projeto-destino.firebaseio.com",
-    "api_key": "SUA_API_KEY_DESTINO",
-    "email": "seu@email.com",
-    "password": "sua_senha"
-}
-```
-
-```bash
-set ANTHROPIC_API_KEY=sua_chave_aqui
-python main_agentes.py
-```
-
----
-
-## Fluxo de Dados
-
-```
-Sistema A (Firebase Origem)
-        │
-        ▼
-[Agente Extração] ──► dados brutos em memória
-        │
-        ▼
-[Agente Validação IA] ──► Claude analisa qualidade e anomalias
-        │
-        ▼
-[Agente Transformação] ──► dados normalizados e enriquecidos
-        │
-        ▼
-[Agente Carga] ──► dados gravados no Sistema B
-        │
-        ▼
-Sistema B (Firebase Destino)
-        │
-        ▼
-[Agente Monitoramento] ──► relatório JSON em dados/relatorios/
-```
+- Cadastro e login de usuários (Firebase Authentication)
+- Listagem de produtos com imagem, nome e preço
+- Favoritar produtos por usuário
+- Carrinho de compras
+- Histórico de pedidos
+- Gerenciamento de produtos (adicionar, editar, remover)
 
 ---
 
@@ -187,13 +19,132 @@ Sistema B (Firebase Destino)
 
 | Tecnologia | Uso |
 |---|---|
-| Python 3.10+ | Linguagem principal |
-| Firebase Realtime Database | Sistema A (Origem) e Sistema B (Destino) |
-| Claude — Anthropic | Validação inteligente de dados (IA) |
-| requests | Comunicação HTTP com Firebase |
-| colorama | Logs coloridos no terminal |
-| python-dotenv | Variáveis de ambiente |
+| Flutter / Dart | App mobile (Android e iOS) |
+| Firebase Authentication | Login e cadastro de usuários |
+| Firebase Realtime Database | Armazenamento de produtos, pedidos e favoritos |
+| Provider | Gerenciamento de estado |
+| http | Comunicação REST com Firebase |
+| shared_preferences | Persistência local do token de autenticação |
 
 ---
 
-Projeto desenvolvido com suporte de IA (Claude — Anthropic) para arquitetura, implementação e validação inteligente dos dados.
+## Como Rodar
+
+### Pré-requisitos
+
+- [Flutter SDK](https://docs.flutter.dev/get-started/install) instalado
+- Emulador Android/iOS ou dispositivo físico conectado
+- Conta Google (para criar o Firebase — gratuito)
+
+### 1. Clone o repositório
+
+```bash
+git clone https://github.com/RaphaelSilvaS/integracao-sistemas.git
+cd integracao-sistemas
+```
+
+### 2. Configure o Firebase (GRATUITO — 15 minutos)
+
+> Se o professor quiser rodar com os dados do projeto original, pule para o passo 3.
+
+**2.1 — Crie um projeto Firebase**
+
+1. Acesse [console.firebase.google.com](https://console.firebase.google.com)
+2. Clique em **Adicionar projeto** > dê um nome > continue
+3. Desative Google Analytics (opcional) > **Criar projeto**
+
+**2.2 — Ative o Realtime Database**
+
+1. No menu lateral: **Compilar > Realtime Database**
+2. Clique em **Criar banco de dados**
+3. Escolha a região (ex: `us-central1`) > **Próximo**
+4. Selecione **Iniciar no modo de teste** > **Ativar**
+5. Copie a URL do banco (ex: `https://SEU-PROJETO-default-rtdb.firebaseio.com`)
+
+**2.3 — Ative a Autenticação**
+
+1. No menu lateral: **Compilar > Authentication**
+2. Clique em **Primeiros passos**
+3. Na aba **Método de login**, ative **E-mail/senha** > Salvar
+
+**2.4 — Copie a Web API Key**
+
+1. No menu lateral: **Configurações do projeto** (ícone de engrenagem)
+2. Na aba **Geral**, copie o campo **Chave da API da Web**
+
+**2.5 — Cole no código**
+
+Edite o arquivo [`lib/utils/constants.dart`](lib/utils/constants.dart):
+
+```dart
+static const FIREBASE_API_KEY = 'SUA_CHAVE_AQUI';
+static const FIREBASE_DB_URL = 'https://SEU-PROJETO-default-rtdb.firebaseio.com';
+```
+
+### 3. Instale as dependências e rode
+
+```bash
+flutter pub get
+flutter run
+```
+
+---
+
+## Estrutura do Projeto
+
+```
+lib/
+├── components/
+│   ├── auth_form.dart          # Formulário de login/cadastro
+│   ├── badge.dart              # Badge do carrinho
+│   ├── cart_items.dart         # Item do carrinho
+│   ├── main_drawer.dart        # Menu lateral
+│   ├── order_item.dart         # Item de pedido
+│   ├── product_grid_item.dart  # Card de produto
+│   └── product_gridview.dart   # Grade de produtos
+├── models/
+│   ├── auth.dart               # Autenticação Firebase
+│   ├── cart_item.dart          # Modelo de item do carrinho
+│   ├── order_list.dart         # Lista de pedidos (Firebase)
+│   ├── order_model.dart        # Modelo de pedido
+│   └── product_model.dart      # Modelo de produto
+├── providers/
+│   ├── cart.dart               # Carrinho de compras
+│   ├── counter.dart            # Contador simples
+│   └── product_list.dart       # Lista de produtos (Firebase)
+├── screens/
+│   ├── auth_screen.dart        # Tela de login/cadastro
+│   ├── cart_screen.dart        # Tela do carrinho
+│   ├── orders_screen.dart      # Histórico de pedidos
+│   ├── product_details_screen.dart  # Detalhe do produto
+│   ├── product_form_screen.dart     # Formulário de produto
+│   ├── products_overview_screen.dart # Home — grade de produtos
+│   └── products_screen.dart    # Gerenciar produtos
+├── utils/
+│   ├── constants.dart          # CONFIGURAÇÃO FIREBASE (edite aqui)
+│   └── routes/app_routes.dart  # Rotas da aplicação
+└── main.dart                   # Ponto de entrada
+```
+
+---
+
+## Integração com Firebase
+
+O app se comunica com o Firebase via **REST API** — sem SDK adicional. Todas as chamadas usam o pacote `http`:
+
+- **Autenticação:** `identitytoolkit.googleapis.com` (login e cadastro)
+- **Produtos/Pedidos/Favoritos:** `firebaseio.com` (leitura e escrita via JSON)
+
+O token de autenticação do Firebase é passado em cada requisição como parâmetro `?auth=TOKEN`, garantindo segurança dos dados por usuário.
+
+---
+
+## Plano Gratuito Firebase (Spark)
+
+| Recurso | Limite gratuito |
+|---|---|
+| Usuários autenticados | Ilimitado |
+| Realtime Database | 1 GB armazenamento / 10 GB/mês transferência |
+| Requests | Ilimitado |
+
+Suficiente para desenvolvimento e demonstração acadêmica.
